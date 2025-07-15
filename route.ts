@@ -31,7 +31,7 @@ const aj = arcjet({
 });
 
 export async function GET(req: Request) {
-  const decision = await aj.protect(req); // Deduct 5 tokens from the bucket
+  const decision = await aj.protect(req, { cost:5 }); // Deduct 5 tokens from the bucket
   console.log("Arcjet decision", decision);
 
   if (decision.isDenied()) {
@@ -65,4 +65,13 @@ export async function GET(req: Request) {
   }
 
   return NextResponse.json({ message: "Hello world" });
+  const cost = req.url.includes("/login") ? 10 : 2;
+  const decision = await aj.protect(req, { cost });
+  console.log("Request IP:, req.headers["x-forwarded-for"] || req.headers["x-real-ip"]);
+  console.log("Path:", url.pathname, "Cost:", cost);
+
+  if (decision.isDenied()) {
+    console.warn("Request blocked:", decision.reason.toString());
+  } 
+
 }
