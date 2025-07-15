@@ -31,10 +31,13 @@ const aj = arcjet({
 });
 
 export async function GET(req: Request) {
-  const decision = await aj.protect(req, { cost:5 }); // Deduct 5 tokens from the bucket
+  const decision = await aj.protect(req, { requested: req.url.includes("/login") ? 10 : 2 });
   console.log("Arcjet decision", decision);
+  console.log("Request IP:", req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip"));
+  console.log("Path:", new URL(req.url).pathname, "Cost:", req.url.includes("/login") ? 10 : 2);
 
   if (decision.isDenied()) {
+    console.warn("Request blocked:", decision.reason.toString());
     if (decision.reason.isRateLimit()) {
       return NextResponse.json(
         { error: "Too Many Requests", reason: decision.reason },
@@ -53,10 +56,6 @@ export async function GET(req: Request) {
     }
   }
 
-  // Arcjet Pro plan verifies the authenticity of common bots using IP data.
-  // Verification isn't always possible, so we recommend checking the decision
-  // separately.
-  // https://docs.arcjet.com/bot-protection/reference#bot-verification
   if (decision.results.some(isSpoofedBot)) {
     return NextResponse.json(
       { error: "Forbidden", reason: decision.reason },
@@ -65,13 +64,4 @@ export async function GET(req: Request) {
   }
 
   return NextResponse.json({ message: "Hello world" });
-  const cost = req.url.includes("/login") ? 10 : 2;
-  const decision = await aj.protect(req, { cost });
-  console.log("Request IP:, req.headers["x-forwarded-for"] || req.headers["x-real-ip"]);
-  console.log("Path:", url.pathname, "Cost:", cost);
-
-  if (decision.isDenied()) {
-    console.warn("Request blocked:", decision.reason.toString());
-  } 
-
 }
